@@ -3,7 +3,8 @@
 name=$1
 shift
 
-NAMESPACE=""
+NAMESPACE="--namespace $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
+
 CURL_OPTS=""
 while getopts ":n:c:" opt; do
   case ${opt} in
@@ -23,6 +24,6 @@ while getopts ":n:c:" opt; do
 done
 shift $((OPTIND -1))
 
-svc=$(kubectl get deployers.core.projectriff.io $NAMESPACE ${name} -o jsonpath='{$.status.serviceName}')
+svc=$(kubectl get deployers.core.projectriff.io ${NAMESPACE} ${name} -o jsonpath='{$.status.serviceName}')
 
 curl -s $svc $CURL_OPTS
