@@ -1,0 +1,28 @@
+#!/bin/bash
+
+name=$1
+shift
+
+NAMESPACE=""
+CURL_OPTS=""
+while getopts ":n:c:" opt; do
+  case ${opt} in
+    n )
+      NAMESPACE="--namespace $OPTARG"
+      ;;
+    c )
+      CURL_OPTS=$OPTARG
+      ;;
+    \? )
+      echo "Invalid option: $OPTARG" 1>&2
+      ;;
+    : )
+      echo "Invalid option: $OPTARG requires an argument" 1>&2
+      ;;
+  esac
+done
+shift $((OPTIND -1))
+
+svc=$(kubectl get deployers.core.projectriff.io $NAMESPACE ${name} -o jsonpath='{$.status.serviceName}')
+
+curl -s $svc $CURL_OPTS
