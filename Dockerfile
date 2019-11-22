@@ -1,3 +1,12 @@
+# build stage
+FROM golang:1.13 AS build
+ADD . /src
+RUN cd /src \
+  && go build cmd/subscriber/subscribe-stream.go \
+  && go build cmd/publisher/publish-stream.go
+
+
+# final stage
 FROM ubuntu:bionic
 
 RUN apt-get update && apt-get install -y curl \
@@ -12,7 +21,10 @@ RUN apt-get update && apt-get install -y curl \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-COPY scripts/* /riff/dev-utils/
+ADD scripts/* /riff/dev-utils/
+
+COPY --from=build /src/subscribe-stream /riff/dev-utils
+COPY --from=build /src/publish-stream /riff/dev-utils
 
 WORKDIR /riff/dev-utils/
 
