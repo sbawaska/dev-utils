@@ -2,8 +2,8 @@
 FROM golang:1.13 AS build
 ADD . /src
 RUN cd /src \
-  && go build cmd/subscriber/subscribe-stream.go \
-  && go build cmd/publisher/publish-stream.go
+  && go build cmd/subscribe.go \
+  && go build cmd/publish.go
 
 
 # final stage
@@ -23,8 +23,8 @@ RUN apt-get update && apt-get install -y curl \
 
 ADD scripts/* /riff/dev-utils/
 
-COPY --from=build /src/subscribe-stream /riff/dev-utils
-COPY --from=build /src/publish-stream /riff/dev-utils
+COPY --from=build /src/subscribe /riff/dev-utils
+COPY --from=build /src/publish /riff/dev-utils
 
 WORKDIR /riff/dev-utils/
 
