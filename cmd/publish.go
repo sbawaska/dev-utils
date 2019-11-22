@@ -15,24 +15,26 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-var namespace string
-var payload string
-var contentType string
-var header []string
-var streamGVR = schema.GroupVersionResource{
-	Group:    "streaming.projectriff.io",
-	Version:  "v1alpha1",
-	Resource: "streams",
-}
+var (
+	payload string
+	contentType string
+	header []string
+	streamGVRp = schema.GroupVersionResource{
+		Group:    "streaming.projectriff.io",
+		Version:  "v1alpha1",
+		Resource: "streams",
+	}
+	namespaceP string
+)
 
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := publishCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-var rootCmd = &cobra.Command{
+var publishCmd = &cobra.Command{
 	Use:     "publish <stream-name> <payload>",
 	Short:   "publish events to the given stream",
 	Long:    "",
@@ -41,19 +43,19 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		k8sClient := devutil.NewK8sClient()
-		topic, err := k8sClient.GetNestedString(args[0], streamGVR, "status", "address", "topic")
+		topic, err := k8sClient.GetNestedString(args[0], streamGVRp, "status", "address", "topic")
 		if err != nil {
 			fmt.Println("error while determining topic name for stream", err)
 			os.Exit(1)
 		}
 
-		gateway, err := k8sClient.GetNestedString(args[0], streamGVR, "status", "address", "gateway")
+		gateway, err := k8sClient.GetNestedString(args[0], streamGVRp, "status", "address", "gateway")
 		if err != nil {
 			fmt.Println("error while determining gateway address for stream", err)
 			os.Exit(1)
 		}
 
-		contentType, err := k8sClient.GetNestedString(args[0], streamGVR, "spec", "contentType")
+		contentType, err := k8sClient.GetNestedString(args[0], streamGVRp, "spec", "contentType")
 		if err != nil {
 			fmt.Println("error while determining contentType for stream", err)
 			os.Exit(1)
@@ -79,10 +81,10 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace of the stream")
-	rootCmd.Flags().StringVarP(&payload, "payload", "p", "", "the content/payload to publish to stream")
-	rootCmd.Flags().StringVarP(&contentType, "content-type", "c", "", "mime type of content")
-	rootCmd.Flags().StringArrayVarP(&header, "header", "", header, "headers for the payload")
+	publishCmd.Flags().StringVarP(&namespaceP, "namespace", "n", "", "namespace of the stream")
+	publishCmd.Flags().StringVarP(&payload, "payload", "p", "", "the content/payload to publish to stream")
+	publishCmd.Flags().StringVarP(&contentType, "content-type", "c", "", "mime type of content")
+	publishCmd.Flags().StringArrayVarP(&header, "header", "", header, "headers for the payload")
 }
 
 func getMapFromHeaders(headers []string) (map[string]string, error) {
