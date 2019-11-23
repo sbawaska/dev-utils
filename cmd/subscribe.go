@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"os"
+	"time"
 
 	devutil "github.com/projectriff/developer-utils/pkg"
 	client "github.com/projectriff/stream-client-go"
@@ -107,6 +109,7 @@ var subscribeCmd = &cobra.Command{
 			fmt.Println("error while subscribing", err)
 			os.Exit(1)
 		}
+		<- time.After(time.Duration(math.MaxInt64))
 	},
 }
 
