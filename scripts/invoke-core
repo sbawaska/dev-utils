@@ -6,24 +6,25 @@ shift
 NAMESPACE="--namespace $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
 
 CURL_OPTS=""
-while getopts ":n:c:" opt; do
+ns_set=false
+getopts ":n:" opt;
   case ${opt} in
     n )
       NAMESPACE="--namespace $OPTARG"
-      ;;
-    c )
-      CURL_OPTS=$OPTARG
-      ;;
-    \? )
-      echo "Invalid option: $OPTARG" 1>&2
+      ns_set=true
       ;;
     : )
       echo "Invalid option: $OPTARG requires an argument" 1>&2
       ;;
   esac
-done
-shift $((OPTIND -1))
+if ${ns_set}; then
+  shift $((OPTIND -1))
+fi
+
+if [[ $1 = "--" ]]; then
+  shift
+fi
 
 svc=$(kubectl get deployers.core.projectriff.io ${NAMESPACE} ${name} -o jsonpath='{$.status.serviceName}')
 
-curl -s $svc $CURL_OPTS
+curl -s ${svc} "$@"
