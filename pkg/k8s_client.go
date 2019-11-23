@@ -2,16 +2,13 @@ package devutil
 
 import (
 	"errors"
-	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 )
 
 type K8sClient struct {
@@ -19,24 +16,10 @@ type K8sClient struct {
 }
 
 func NewK8sClient() *K8sClient {
-	var kubeconfig *string
-	if home := homeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-	flag.Parse()
-
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		panic(err.Error())
 	}
-	// TODO remove above
-	//config, err := rest.InClusterConfig()
-	//if err != nil {
-	//	panic(err.Error())
-	//}
 	// creates the clientset
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
@@ -66,11 +49,4 @@ func (c *K8sClient) GetNestedString(streamName string, gvr schema.GroupVersionRe
 		}
 	}
 	return "", errors.New(fmt.Sprintf("stream: %s not found", streamName))
-}
-
-func homeDir() string {
-	if h := os.Getenv("HOME"); h != "" {
-		return h
-	}
-	return os.Getenv("USERPROFILE") // windows
 }
