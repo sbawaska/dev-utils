@@ -2,7 +2,7 @@ package devutil
 
 import (
 	"errors"
-	"fmt"
+	"io/ioutil"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -10,6 +10,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 )
+
+const namespaceFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 
 type K8sClient struct {
 	dc dynamic.Interface
@@ -30,23 +32,37 @@ func NewK8sClient() *K8sClient {
 	}
 }
 
-func (c *K8sClient) GetNestedString(streamName string, gvr schema.GroupVersionResource, fields... string) (string, error) {
-	streams, err := c.dc.Resource(gvr).List(v1.ListOptions{})
+func (c *K8sClient) GetNestedString(streamName, namespace string, gvr schema.GroupVersionResource, fields... string) (string, error) {
+	ns, err := resolveNamespace(namespace)
 	if err != nil {
 		return "", err
 	}
 
-	for _, stream := range streams.Items {
-		if stream.GetName() == streamName {
-			topic, found, err := unstructured.NestedString(stream.UnstructuredContent(), fields...)
-			if err != nil {
-				return "", err
-			}
-			if !found {
-				return "", errors.New("unexpected structure of status")
-			}
-			return topic, nil
-		}
+	stream, err := c.dc.Resource(gvr).Namespace(ns).Get(streamName, v1.GetOptions{})
+	if err != nil {
+		return "", err
 	}
-	return "", errors.New(fmt.Sprintf("stream: %s not found", streamName))
+
+	topic, found, err := unstructured.NestedString(stream.UnstructuredContent(), fields...)
+	if err != nil {
+		return "", err
+	}
+	if !found {
+		return "", errors.New("unexpected structure of status")
+	}
+	return topic, nil
+}
+
+func resolveNamespace(namespace string) (string, error) {
+	if namespace != "" {
+		return namespace, nil
+	}
+	return getDefaultNamespace()
+}
+func getDefaultNamespace() (string, error) {
+	namespacebytes, err := ioutil.ReadFile(namespaceFilePath)
+	if err != nil {
+		return "", err
+	}
+	return string(namespacebytes), nil
 }

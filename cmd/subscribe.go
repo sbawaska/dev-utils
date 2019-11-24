@@ -76,19 +76,19 @@ var subscribeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		k8sClient := devutil.NewK8sClient()
-		topic, err := k8sClient.GetNestedString(args[0], streamGVRc, "status", "address", "topic")
+		topic, err := k8sClient.GetNestedString(args[0], namespaceC, streamGVRc, "status", "address", "topic")
 		if err != nil {
 			fmt.Println("error while determining topic name for stream", err)
 			os.Exit(1)
 		}
 
-		gateway, err := k8sClient.GetNestedString(args[0], streamGVRc, "status", "address", "gateway")
+		gateway, err := k8sClient.GetNestedString(args[0], namespaceC, streamGVRc, "status", "address", "gateway")
 		if err != nil {
 			fmt.Println("error while determining gateway address for stream", err)
 			os.Exit(1)
 		}
 
-		contentType, err := k8sClient.GetNestedString(args[0], streamGVRc, "spec", "contentType")
+		contentType, err := k8sClient.GetNestedString(args[0], namespaceC, streamGVRc, "spec", "contentType")
 		if err != nil {
 			fmt.Println("error while determining contentType for stream", err)
 			os.Exit(1)
