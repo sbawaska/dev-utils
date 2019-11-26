@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y curl \
   && echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list \
   && apt-get update \
   && apt-get install -y kubectl \
+  && apt-get install -y jq \
   && apt-get remove -y --auto-remove apt-transport-https \
   && apt-get remove -y --auto-remove gnupg2 \
   && apt-get clean \
