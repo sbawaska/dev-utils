@@ -7,10 +7,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"math/rand"
 	"os"
-	"time"
 
 	devutil "github.com/projectriff/developer-utils/pkg"
 	client "github.com/projectriff/stream-client-go"
@@ -21,8 +19,8 @@ import (
 
 var (
 	payloadAsString bool
-	offset int32
-	streamGVRc = schema.GroupVersionResource{
+	offset          int32
+	streamGVRc      = schema.GroupVersionResource{
 		Group:    "streaming.projectriff.io",
 		Version:  "v1alpha1",
 		Resource: "streams",
@@ -31,8 +29,8 @@ var (
 )
 
 type Event struct {
-	Payload     string `json:"payload"`
-	ContentType string `json:"contentType"`
+	Payload     string            `json:"payload"`
+	ContentType string            `json:"contentType"`
 	Headers     map[string]string `json:"headers"`
 }
 
@@ -74,6 +72,14 @@ var subscribeCmd = &cobra.Command{
 	Example: "subscribe-stream letters --payload-as-string",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		stop := devutil.SetupSignalHandler()
+		go func() {
+			select {
+			case <-stop:
+				cancel()
+			}
+		}()
 
 		k8sClient := devutil.NewK8sClient()
 		topic, err := k8sClient.GetNestedString(args[0], namespaceC, streamGVRc, "status", "address", "topic")
@@ -101,15 +107,15 @@ var subscribeCmd = &cobra.Command{
 		}
 
 		var eventErrHandler client.EventErrHandler
-		eventErrHandler = func(cancel context.CancelFunc, err error) {
+		eventErrHandler = func(_ context.CancelFunc, err error) {
 			fmt.Printf("ERROR: %v\n", err)
 		}
-		_, err = sc.Subscribe(context.Background(), fmt.Sprintf("g%d", rand.Int31()), 0, eventHandler, eventErrHandler)
+		_, err = sc.Subscribe(ctx, fmt.Sprintf("g%d", rand.Int31()), 0, eventHandler, eventErrHandler)
 		if err != nil {
 			fmt.Println("error while subscribing", err)
 			os.Exit(1)
 		}
-		<- time.After(time.Duration(math.MaxInt64))
+		<-ctx.Done()
 	},
 }
 

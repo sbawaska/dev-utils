@@ -2,8 +2,8 @@
 FROM golang:1.13 AS build
 ADD . /src
 RUN cd /src \
-  && go build cmd/subscribe.go \
-  && go build cmd/publish.go
+  && go build ./cmd/subscribe \
+  && go build ./cmd/publish
 
 
 # final stage
