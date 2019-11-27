@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	payload string
+	payload     string
 	contentType string
-	header []string
-	streamGVRp = schema.GroupVersionResource{
+	header      []string
+	streamGVRp  = schema.GroupVersionResource{
 		Group:    "streaming.projectriff.io",
 		Version:  "v1alpha1",
 		Resource: "streams",
@@ -41,6 +41,14 @@ var publishCmd = &cobra.Command{
 	Example: "publish letters --payload=my-value",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		stop := devutil.SetupSignalHandler()
+		go func() {
+			select {
+			case <-stop:
+				cancel()
+			}
+		}()
 
 		k8sClient := devutil.NewK8sClient()
 		topic, err := k8sClient.GetNestedString(args[0], namespaceP, streamGVRp, "status", "address", "topic")
@@ -72,7 +80,7 @@ var publishCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		_, err = sc.Publish(context.Background(), strings.NewReader(payload), nil, contentType, m)
+		_, err = sc.Publish(ctx, strings.NewReader(payload), nil, contentType, m)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
