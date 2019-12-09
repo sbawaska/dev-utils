@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
+	"time"
 
 	devutil "github.com/projectriff/developer-utils/pkg"
 	client "github.com/projectriff/stream-client-go"
@@ -110,7 +110,7 @@ var subscribeCmd = &cobra.Command{
 		eventErrHandler = func(_ context.CancelFunc, err error) {
 			fmt.Printf("ERROR: %v\n", err)
 		}
-		_, err = sc.Subscribe(ctx, fmt.Sprintf("g%d", rand.Int31()), 0, eventHandler, eventErrHandler)
+		_, err = sc.Subscribe(ctx, fmt.Sprintf("g%d", time.Now().UnixNano()), 0, eventHandler, eventErrHandler)
 		if err != nil {
 			fmt.Println("error while subscribing", err)
 			os.Exit(1)
