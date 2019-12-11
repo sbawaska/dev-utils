@@ -31,4 +31,4 @@ WORKDIR /riff/dev-utils/
 
 ENV PATH="/riff/dev-utils/:${PATH}"
 
-CMD ["sh", "-c", "tail -f /dev/null"]
+CMD ["entrypoint.sh"]
