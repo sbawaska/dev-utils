@@ -21,6 +21,11 @@ kubectl create clusterrolebinding dev-util-stream --clusterrole=riff-streaming-r
 kubectl create clusterrolebinding dev-util-core --clusterrole=riff-core-readonly-role --serviceaccount=default:default
 kubectl create clusterrolebinding dev-util-knative --clusterrole=riff-knative-readonly-role --serviceaccount=default:default
 ```
+The `publish` and `subscribe` tools will additionally require read access to secrets in your development namespace:
+```bash
+kubectl create role view-secrets-role --namespace ${NAMESPACE} --resource secrets --verb get,watch,list
+kubectl create rolebinding dev-util-secrets --namespace ${NAMESPACE} --role=view-secrets-role --serviceaccount=default:default
+```
 
 ## Included tools
 1. **invoke-core:** To invoke the given core deployer.  

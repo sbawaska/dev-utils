@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -23,6 +24,10 @@ var (
 		Group:    "streaming.projectriff.io",
 		Version:  "v1alpha1",
 		Resource: "streams",
+	}
+	secretGVRp = schema.GroupVersionResource{
+		Version:  "v1",
+		Resource: "secrets",
 	}
 	namespaceP string
 )
@@ -51,15 +56,33 @@ var publishCmd = &cobra.Command{
 		}()
 
 		k8sClient := devutil.NewK8sClient()
-		topic, err := k8sClient.GetNestedString(args[0], namespaceP, streamGVRp, "status", "address", "topic")
+		secretName, err := k8sClient.GetNestedString(args[0], namespaceP, streamGVRp, "status", "binding", "secretRef", "name")
 		if err != nil {
-			fmt.Println("error while determining topic name for stream", err)
+			fmt.Println("error while finding binding secret reference", err)
 			os.Exit(1)
 		}
 
-		gateway, err := k8sClient.GetNestedString(args[0], namespaceP, streamGVRp, "status", "address", "gateway")
+		encodedTopic, err := k8sClient.GetNestedString(secretName, namespaceP, secretGVRp, "data", "topic")
+		if err != nil {
+			fmt.Println("error while determining gateway topic for stream", err)
+			os.Exit(1)
+		}
+
+		topic, err := base64.StdEncoding.DecodeString(encodedTopic)
+		if err != nil {
+			fmt.Println("error decoding topic", err)
+			os.Exit(1)
+		}
+
+		encodedGateway, err := k8sClient.GetNestedString(secretName, namespaceP, secretGVRp, "data", "gateway")
 		if err != nil {
 			fmt.Println("error while determining gateway address for stream", err)
+			os.Exit(1)
+		}
+
+		gateway, err := base64.StdEncoding.DecodeString(encodedGateway)
+		if err != nil {
+			fmt.Println("error decoding gateway address", err)
 			os.Exit(1)
 		}
 
@@ -75,7 +98,7 @@ var publishCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		sc, err := client.NewStreamClient(gateway, topic, contentType)
+		sc, err := client.NewStreamClient(string(gateway), string(topic), contentType)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
