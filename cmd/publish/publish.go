@@ -69,7 +69,7 @@ var publishCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		m, err := getMapFromHeaders(header)
+		_, err = getMapFromHeaders(header)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -80,7 +80,7 @@ var publishCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		_, err = sc.Publish(ctx, strings.NewReader(payload), nil, contentType, m)
+		_, err = sc.Publish(ctx, "dev-utils", strings.NewReader(payload), nil, contentType)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

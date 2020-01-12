@@ -2,14 +2,11 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	devutil "github.com/projectriff/developer-utils/pkg"
 	client "github.com/projectriff/stream-client-go"
 	"github.com/spf13/cobra"
@@ -41,27 +38,8 @@ func main() {
 	}
 }
 
-var eventHandler = func(ctx context.Context, payload io.Reader, contentType string, headers map[string]string) error {
-	bytes, err := ioutil.ReadAll(payload)
-	if err != nil {
-		return err
-	}
-	var payloadStr string
-	if payloadAsString {
-		payloadStr = string(bytes)
-	} else {
-		payloadStr = base64.StdEncoding.EncodeToString(bytes)
-	}
-	evt := Event{
-		Payload:     payloadStr,
-		ContentType: contentType,
-		Headers:     headers,
-	}
-	marshaledEvt, err := json.Marshal(evt)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("%s\n", marshaledEvt)
+var eventHandler = func(ctx context.Context, event cloudevents.Event) error {
+	fmt.Printf("%#v\n", event)
 	return nil
 }
 
@@ -108,7 +86,7 @@ var subscribeCmd = &cobra.Command{
 
 		var eventErrHandler client.EventErrHandler
 		eventErrHandler = func(_ context.CancelFunc, err error) {
-			fmt.Printf("ERROR: %v\n", err)
+			fmt.Printf("ERROR: %#v\n", err)
 		}
 		_, err = sc.Subscribe(ctx, fmt.Sprintf("g%d", time.Now().UnixNano()), 0, eventHandler, eventErrHandler)
 		if err != nil {
