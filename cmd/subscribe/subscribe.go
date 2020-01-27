@@ -18,7 +18,6 @@ import (
 )
 
 var (
-	payloadAsString bool
 	offset          int32
 	streamGVRc      = schema.GroupVersionResource{
 		Group:    "streaming.projectriff.io",
@@ -50,12 +49,9 @@ var eventHandler = func(ctx context.Context, payload io.Reader, contentType stri
 	if err != nil {
 		return err
 	}
-	var payloadStr string
-	if payloadAsString {
-		payloadStr = string(bytes)
-	} else {
-		payloadStr = base64.StdEncoding.EncodeToString(bytes)
-	}
+
+	payloadStr := base64.StdEncoding.EncodeToString(bytes)
+
 	evt := Event{
 		Payload:     payloadStr,
 		ContentType: contentType,
@@ -73,7 +69,7 @@ var subscribeCmd = &cobra.Command{
 	Use:     "subscribe-stream <stream-name>",
 	Short:   "subscribe for events from the given stream",
 	Long:    "",
-	Example: "subscribe-stream letters --payload-as-string",
+	Example: "subscribe-stream letters",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -142,7 +138,5 @@ var subscribeCmd = &cobra.Command{
 }
 
 func init() {
-	subscribeCmd.Flags().BoolVarP(&payloadAsString, "payload-as-string", "", false,
-		"display the payload as string rather than base64 encoded string")
 	subscribeCmd.Flags().StringVarP(&namespaceC, "namespace", "n", "", "namespace of the stream")
 }
