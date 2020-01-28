@@ -2,21 +2,17 @@
 This repository provides tools for riff users to develop and debug functions. These tools are bundled in a container image that is meant to be run in the development cluster.
 
 ## Using the tools
-These tools can be used by running a simple pod in the k8s cluster with a configuration like this:
+These tools can be used by running a pod in the k8s cluster with a configuration like this:
 ```bash
-kubectl run dev-utils --image=projectriff/dev-utils --generator=run-pod/v1
+# create a service account to run with
+kubectl create serviceaccount riff-dev --namespace=${NAMESPACE}
+# grant that service account edit access to resources in the namespace
+kubectl create rolebinding riff-dev-edit --namespace=${NAMESPACE} --clusterrole=edit --serviceaccount=${NAMESPACE}:riff-dev
+# run the utils using the service account as a pod
+kubectl run riff-dev --namespace=${NAMESPACE} --image=projectriff/dev-utils --serviceaccount=riff-dev --generator=run-pod/v1
 ```
-Then depending upon which riff runtime you are using, create the appropriate clusterrolebindings:
-```bash
-kubectl create clusterrolebinding dev-util-stream --clusterrole=riff-streaming-readonly-role --serviceaccount=default:default
-kubectl create clusterrolebinding dev-util-core --clusterrole=riff-core-readonly-role --serviceaccount=default:default
-kubectl create clusterrolebinding dev-util-knative --clusterrole=riff-knative-readonly-role --serviceaccount=default:default
-```
-The `publish` and `subscribe` tools will additionally require read access to secrets in your development namespace:
-```bash
-kubectl create role view-secrets-role --namespace ${NAMESPACE} --resource secrets --verb get,watch,list
-kubectl create rolebinding dev-util-secrets --namespace ${NAMESPACE} --role=view-secrets-role --serviceaccount=default:default
-```
+
+As pods do not survive node failures, over time the riff-dev pod may stop running. When this happens create a new pod using the same service account.
 
 ## Included tools
 1. **publish:** To publish an event to the given stream.
@@ -40,11 +36,23 @@ The command takes the form:
 
 1. [curl](https://curl.haxx.se/): To make HTTP requests.
 
-The namespace parameter is optional for all the commands. If not specified, the namespace of the `dev-utils` pod will be assumed.
+The namespace parameter is optional for all the commands. If not specified, the namespace of the `riff-dev` pod will be assumed.
 
 ## Examples
 These tools can be invoked using kubectl exec. some examples follow:
+
 ```bash
-kubectl exec dev-utils -it -- publish letters --content-type text/plain --payload foo
-kubectl exec dev-utils -it -- subscribe letters --from-beginning
+kubectl exec riff-dev --namespace ${NAMESPACE} -it -- publish letters --content-type text/plain --payload foo
+```
+
+```bash
+kubectl exec riff-dev --namespace ${NAMESPACE} -it -- subscribe letters --from-beginning
+```
+
+```bash
+kubectl exec riff-dev --namespace ${NAMESPACE} -it -- curl http://hello.default.svc.cluster.local/ -H 'Content-Type: text/plain' -H 'Accept: text/plain' -d '<insert your name>'
+```
+
+```bash
+kubectl exec riff-dev --namespace ${NAMESPACE} -it -- bash
 ```
