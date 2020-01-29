@@ -11,6 +11,18 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+var (
+	StreamGVR = schema.GroupVersionResource{
+		Group:    "streaming.projectriff.io",
+		Version:  "v1alpha1",
+		Resource: "streams",
+	}
+	SecretGVR = schema.GroupVersionResource{
+		Version:  "v1",
+		Resource: "secrets",
+	}
+)
+
 const namespaceFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 
 type K8sClient struct {
@@ -28,11 +40,11 @@ func NewK8sClient() *K8sClient {
 		panic(err.Error())
 	}
 	return &K8sClient{
-		dc:dynamicClient,
+		dc: dynamicClient,
 	}
 }
 
-func (c *K8sClient) GetNestedString(streamName, namespace string, gvr schema.GroupVersionResource, fields... string) (string, error) {
+func (c *K8sClient) GetNestedString(streamName, namespace string, gvr schema.GroupVersionResource, fields ...string) (string, error) {
 	ns, err := resolveNamespace(namespace)
 	if err != nil {
 		return "", err

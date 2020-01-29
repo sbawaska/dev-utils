@@ -13,7 +13,6 @@ import (
 	devutil "github.com/projectriff/developer-utils/pkg"
 	client "github.com/projectriff/stream-client-go"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
@@ -23,16 +22,7 @@ var (
 	payloadBase64 string
 	contentType   string
 	header        []string
-	streamGVRp    = schema.GroupVersionResource{
-		Group:    "streaming.projectriff.io",
-		Version:  "v1alpha1",
-		Resource: "streams",
-	}
-	secretGVRp = schema.GroupVersionResource{
-		Version:  "v1",
-		Resource: "secrets",
-	}
-	namespaceP string
+	namespace     string
 )
 
 func main() {
@@ -59,13 +49,13 @@ var publishCmd = &cobra.Command{
 		}()
 
 		k8sClient := devutil.NewK8sClient()
-		secretName, err := k8sClient.GetNestedString(args[0], namespaceP, streamGVRp, "status", "binding", "secretRef", "name")
+		secretName, err := k8sClient.GetNestedString(args[0], namespace, devutil.StreamGVR, "status", "binding", "secretRef", "name")
 		if err != nil {
 			fmt.Println("error while finding binding secret reference", err)
 			os.Exit(1)
 		}
 
-		encodedTopic, err := k8sClient.GetNestedString(secretName, namespaceP, secretGVRp, "data", "topic")
+		encodedTopic, err := k8sClient.GetNestedString(secretName, namespace, devutil.SecretGVR, "data", "topic")
 		if err != nil {
 			fmt.Println("error while determining gateway topic for stream", err)
 			os.Exit(1)
@@ -77,7 +67,7 @@ var publishCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		encodedGateway, err := k8sClient.GetNestedString(secretName, namespaceP, secretGVRp, "data", "gateway")
+		encodedGateway, err := k8sClient.GetNestedString(secretName, namespace, devutil.SecretGVR, "data", "gateway")
 		if err != nil {
 			fmt.Println("error while determining gateway address for stream", err)
 			os.Exit(1)
@@ -89,7 +79,7 @@ var publishCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		acceptableContentType, err := k8sClient.GetNestedString(args[0], namespaceP, streamGVRp, "spec", "contentType")
+		acceptableContentType, err := k8sClient.GetNestedString(args[0], namespace, devutil.StreamGVR, "spec", "contentType")
 		if err != nil {
 			fmt.Println("error while determining acceptableContentType for stream", err)
 			os.Exit(1)
@@ -131,7 +121,7 @@ func resolvePayload(payload string, payloadBase64 string) (io.Reader, error) {
 }
 
 func init() {
-	publishCmd.Flags().StringVarP(&namespaceP, "namespace", "n", "", "namespace of the stream")
+	publishCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace of the stream")
 	publishCmd.Flags().StringVarP(&payload, "payload", "p", "", "the content/payload to publish to stream")
 	publishCmd.Flags().StringVarP(&contentType, "content-type", "c", "", "mime type of content")
 	publishCmd.Flags().StringArrayVarP(&header, "header", "", header, "headers for the payload")
