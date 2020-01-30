@@ -17,9 +17,9 @@ import (
 )
 
 var (
-	fromBeginning                        bool
-	namespace                            string
-	dangerouslyEncodePayloadsAsPlainText bool
+	fromBeginning   bool
+	namespace       string
+	payloadEncoding string
 )
 
 type Event struct {
@@ -42,10 +42,13 @@ var eventHandler = func(ctx context.Context, payload io.Reader, contentType stri
 	}
 
 	var payloadStr string
-	if dangerouslyEncodePayloadsAsPlainText {
+	switch payloadEncoding {
+	case "raw":
 		payloadStr = string(bytes)
-	} else {
+	case "base64":
 		payloadStr = base64.StdEncoding.EncodeToString(bytes)
+	default:
+		return fmt.Errorf("unsupported --payload-encoding %q", payloadEncoding)
 	}
 
 	if headers == nil {
@@ -140,5 +143,5 @@ var subscribeCmd = &cobra.Command{
 func init() {
 	subscribeCmd.Flags().BoolVarP(&fromBeginning, "from-beginning", "b", false, "read everything in the stream")
 	subscribeCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace of the stream")
-	subscribeCmd.Flags().BoolVar(&dangerouslyEncodePayloadsAsPlainText, "dangerously-encode-payloads-as-plain-text", false, "treat raw payloads as plain text, by default payloads are base64 encoded. This option may corrupt your terminal if binary data is present in the stream")
+	subscribeCmd.Flags().StringVarP(&payloadEncoding, "payload-encoding", "p", "base64", "encoding for payload in emitted messages, one of 'base64' or 'raw'")
 }
