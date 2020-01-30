@@ -13,22 +13,13 @@ import (
 	devutil "github.com/projectriff/developer-utils/pkg"
 	client "github.com/projectriff/stream-client-go"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 var (
-	fromBeginning bool
-	streamGVRc    = schema.GroupVersionResource{
-		Group:    "streaming.projectriff.io",
-		Version:  "v1alpha1",
-		Resource: "streams",
-	}
-	secretGVRc = schema.GroupVersionResource{
-		Version:  "v1",
-		Resource: "secrets",
-	}
-	namespaceC string
+	fromBeginning   bool
+	namespace       string
+	payloadEncoding string
 )
 
 type Event struct {
@@ -50,9 +41,18 @@ var eventHandler = func(ctx context.Context, payload io.Reader, contentType stri
 		return err
 	}
 
-	payloadStr := base64.StdEncoding.EncodeToString(bytes)
+	var payloadStr string
+	switch payloadEncoding {
+	case "raw":
+		payloadStr = string(bytes)
+	case "base64":
+		payloadStr = base64.StdEncoding.EncodeToString(bytes)
+	default:
+		return fmt.Errorf("unsupported --payload-encoding %q", payloadEncoding)
+	}
+
 	if headers == nil {
-		headers = make(map[string]string, 0)
+		headers = map[string]string{}
 	}
 
 	evt := Event{
@@ -85,13 +85,13 @@ var subscribeCmd = &cobra.Command{
 		}()
 
 		k8sClient := devutil.NewK8sClient()
-		secretName, err := k8sClient.GetNestedString(args[0], namespaceC, streamGVRc, "status", "binding", "secretRef", "name")
+		secretName, err := k8sClient.GetNestedString(args[0], namespace, devutil.StreamGVR, "status", "binding", "secretRef", "name")
 		if err != nil {
 			fmt.Println("error while finding binding secret reference", err)
 			os.Exit(1)
 		}
 
-		encodedTopic, err := k8sClient.GetNestedString(secretName, namespaceC, secretGVRc, "data", "topic")
+		encodedTopic, err := k8sClient.GetNestedString(secretName, namespace, devutil.SecretGVR, "data", "topic")
 		if err != nil {
 			fmt.Println("error while determining gateway topic for stream", err)
 			os.Exit(1)
@@ -103,7 +103,7 @@ var subscribeCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		encodedGateway, err := k8sClient.GetNestedString(secretName, namespaceC, secretGVRc, "data", "gateway")
+		encodedGateway, err := k8sClient.GetNestedString(secretName, namespace, devutil.SecretGVR, "data", "gateway")
 		if err != nil {
 			fmt.Println("error while determining gateway address for stream", err)
 			os.Exit(1)
@@ -115,7 +115,7 @@ var subscribeCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		contentType, err := k8sClient.GetNestedString(args[0], namespaceC, streamGVRc, "spec", "contentType")
+		contentType, err := k8sClient.GetNestedString(args[0], namespace, devutil.StreamGVR, "spec", "contentType")
 		if err != nil {
 			fmt.Println("error while determining contentType for stream", err)
 			os.Exit(1)
@@ -142,5 +142,6 @@ var subscribeCmd = &cobra.Command{
 
 func init() {
 	subscribeCmd.Flags().BoolVarP(&fromBeginning, "from-beginning", "b", false, "read everything in the stream")
-	subscribeCmd.Flags().StringVarP(&namespaceC, "namespace", "n", "", "namespace of the stream")
+	subscribeCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace of the stream")
+	subscribeCmd.Flags().StringVarP(&payloadEncoding, "payload-encoding", "p", "base64", "encoding for payload in emitted messages, one of 'base64' or 'raw'")
 }
